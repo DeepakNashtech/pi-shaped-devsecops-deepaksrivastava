@@ -19,10 +19,11 @@ jobs:
         run: |
           curl -sSL https://github.com/zricethezav/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
           chmod +x gitleaks
-	  sudo mv gitleaks /usr/local/bin/
-	  gitleaks version
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
 
       - name: Run gitleaks scan
         run: |
           gitleaks detect --source=. --report=gitleaks-report.json --format=json || true
           jq '.leaks | length' gitleaks-report.json | grep -q '^0$' || (echo "Leaks detected, fail the job." && exit 1)
+
