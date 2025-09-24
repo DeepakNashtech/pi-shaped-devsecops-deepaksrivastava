@@ -24,5 +24,5 @@ jobs:
       - name: Run gitleaks scan
         run: |
           gitleaks detect --no-git -s . -c Security_Compliance_workshop-Deepak-Srivastava/Day1/.gitleaks.toml --report-format json --report-path gitleaks-report.json || true
-          jq '.leaks | length' gitleaks-report.json | grep -q '^0$' || (echo "Leaks detected, fail the job." && exit 1)
+          cat '.leaks | length' gitleaks-report.json | grep -q '^0$' || (echo "Leaks detected, fail the job." && exit 1)
 
