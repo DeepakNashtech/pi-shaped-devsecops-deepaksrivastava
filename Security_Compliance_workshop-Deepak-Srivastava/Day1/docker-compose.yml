@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  app:
+    container_name: devsecops-demo
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devsecops-demo:latest
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    # The Dockerfile already sets a non-root user
+    # and defines the command via gunicorn.
+
+

@@ -58,7 +58,5 @@ secrets/
 *.key
 *.crt
 
-Dockerfile
-
 # Local secrets manifest (do not commit real values)
 secret.txt

@@ -1,418 +1,113 @@
-# Gitleaks
+# Shift-Left Security Demo
 
-```
-┌─○───┐
-│ │╲  │
-│ │ ○ │
-│ ○ ░ │
-└─░───┘
-```
+**Objective:** Demonstrate shift-left security by scanning a repo for secrets (Gitleaks), removing them safely, and deploying a small Flask app in Docker. This repo intentionally contains a demo hardcoded secret so you can follow the detection/removal flow.
 
-<p align="left">
-  <p align="left">
-	  <a href="https://github.com/zricethezav/gitleaks/actions/workflows/test.yml">
-		  <img alt="Github Test" src="https://github.com/zricethezav/gitleaks/actions/workflows/test.yml/badge.svg">
-	  </a>
-	  <a href="https://hub.docker.com/r/zricethezav/gitleaks">
-		  <img src="https://img.shields.io/docker/pulls/zricethezav/gitleaks.svg" />
-	  </a>
-	  <a href="https://github.com/zricethezav/gitleaks-action">
-        	<img alt="gitleaks badge" src="https://img.shields.io/badge/protected%20by-gitleaks-blue">
-    	 </a>
-	  <a href="https://twitter.com/intent/follow?screen_name=zricethezav">
-		  <img src="https://img.shields.io/twitter/follow/zricethezav?label=Follow%20zricethezav&style=social&color=blue" alt="Follow @zricethezav" />
-	  </a>
-  </p>
-</p>
+## Contents
+- `app.py` — sample Flask app (contains a demo hardcoded secret)
+- `requirements.txt` — Python requirements
+- `.env.example` — example env file
+- `.gitleaks.toml` — optional gitleaks config
+- `Dockerfile` and `docker-compose.yml` — for local Docker deploy
+- `.github/workflows/gitleaks.yml` — GitHub Action to run gitleaks on pushes/PRs
 
-### Join our Discord! [![Discord](https://img.shields.io/discord/1102689410522284044.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/sydS6AHTUP)
+---
 
-Gitleaks is a SAST tool for **detecting** and **preventing** hardcoded secrets like passwords, api keys, and tokens in git repos. Gitleaks is an **easy-to-use, all-in-one solution** for detecting secrets, past or present, in your code.
+## Quick start (local)
 
-```
-➜  ~/code(master) gitleaks detect --source . -v
-
-    ○
-    │╲
-    │ ○
-    ○ ░
-    ░    gitleaks
-
-
-Finding:     "export BUNDLE_ENTERPRISE__CONTRIBSYS__COM=cafebabe:deadbeef",
-Secret:      cafebabe:deadbeef
-RuleID:      sidekiq-secret
-Entropy:     2.609850
-File:        cmd/generate/config/rules/sidekiq.go
-Line:        23
-Commit:      cd5226711335c68be1e720b318b7bc3135a30eb2
-Author:      John
-Email:       john@users.noreply.github.com
-Date:        2022-08-03T12:31:40Z
-Fingerprint: cd5226711335c68be1e720b318b7bc3135a30eb2:cmd/generate/config/rules/sidekiq.go:sidekiq-secret:23
-```
-
-## Getting Started
-
-Gitleaks can be installed using Homebrew, Docker, or Go. Gitleaks is also available in binary form for many popular platforms and OS types on the [releases page](https://github.com/zricethezav/gitleaks/releases). In addition, Gitleaks can be implemented as a pre-commit hook directly in your repo or as a GitHub action using [Gitleaks-Action](https://github.com/gitleaks/gitleaks-action).
-
-### Installing
-
+1. Clone and inspect the repo:
 ```bash
-# MacOS
-brew install gitleaks
-
-# Docker (DockerHub)
-docker pull zricethezav/gitleaks:latest
-docker run -v ${path_to_host_folder_to_scan}:/path zricethezav/gitleaks:latest [COMMAND] --source="/path" [OPTIONS]
-
-# Docker (ghcr.io)
-docker pull ghcr.io/gitleaks/gitleaks:latest
-docker run -v ${path_to_host_folder_to_scan}:/path ghcr.io/gitleaks/gitleaks:latest [COMMAND] --source="/path" [OPTIONS]
-
-# From Source
-git clone https://github.com/gitleaks/gitleaks.git
-cd gitleaks
-make build
+git clone https://github.com/DeepakNashtech/pi-shaped-devsecops-deepaksrivastava/tree/main/Security_Compliance_workshop-Deepak-Srivastava/Day1
+cd Day1
 ```
 
-### GitHub Action
-
-Check out the official [Gitleaks GitHub Action](https://github.com/gitleaks/gitleaks-action)
-
-```
-name: gitleaks
-on: [pull_request, push, workflow_dispatch]
-jobs:
-  scan:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE}} # Only required for Organizations, not personal accounts.
+2. Run the app locally:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py
+# Visit http://localhost:5000
 ```
 
-### Pre-Commit
-
-1. Install pre-commit from https://pre-commit.com/#install
-2. Create a `.pre-commit-config.yaml` file at the root of your repository with the following content:
-
-   ```
-   repos:
-     - repo: https://github.com/gitleaks/gitleaks
-       rev: v8.16.1
-       hooks:
-         - id: gitleaks
-   ```
-
-   for a [native execution of GitLeaks](https://github.com/zricethezav/gitleaks/releases) or use the [`gitleaks-docker` pre-commit ID](https://github.com/zricethezav/gitleaks/blob/master/.pre-commit-hooks.yaml) for executing GitLeaks using the [official Docker images](#docker)
-
-3. Auto-update the config to the latest repos' versions by executing `pre-commit autoupdate`
-4. Install with `pre-commit install`
-5. Now you're all set!
-
-```
-➜ git commit -m "this commit contains a secret"
-Detect hardcoded secrets.................................................Failed
+3. Scan with Gitleaks:
+```bash
+gitleaks detect --source=. --report=gitleaks-report.json --format=json
+cat gitleaks-report.json | jq .
 ```
 
-Note: to disable the gitleaks pre-commit hook you can prepend `SKIP=gitleaks` to the commit command
-and it will skip running gitleaks
-
-```
-➜ SKIP=gitleaks git commit -m "skip gitleaks check"
-Detect hardcoded secrets................................................Skipped
-```
-
-## Usage
-
-```
-Usage:
-  gitleaks [command]
-
-Available Commands:
-  completion  generate the autocompletion script for the specified shell
-  detect      detect secrets in code
-  help        Help about any command
-  protect     protect secrets in code
-  version     display gitleaks version
-
-Flags:
-  -b, --baseline-path string       path to baseline with issues that can be ignored
-  -c, --config string              config file path
-                                   order of precedence:
-                                   1. --config/-c
-                                   2. env var GITLEAKS_CONFIG
-                                   3. (--source/-s)/.gitleaks.toml
-                                   If none of the three options are used, then gitleaks will use the default config
-      --exit-code int              exit code when leaks have been encountered (default 1)
-  -h, --help                       help for gitleaks
-  -l, --log-level string           log level (trace, debug, info, warn, error, fatal) (default "info")
-      --max-target-megabytes int   files larger than this will be skipped
-      --no-color                   turn off color for verbose output
-      --no-banner                  suppress banner
-      --redact                     redact secrets from logs and stdout
-  -f, --report-format string       output format (json, csv, junit, sarif) (default "json")
-  -r, --report-path string         report file
-  -s, --source string              path to source (default ".")
-  -v, --verbose                    show verbose output from scan
-
-Use "gitleaks [command] --help" for more information about a command.
+4. Remove secrets from all history (example using git-filter-repo):
+```bash
+pip install git-filter-repo
+echo "sk_live_1234567890_DEMOSECRET==REDACTED_DEMO_API_KEY" > replacements.txt
+git filter-repo --replace-text replacements.txt
 ```
 
-### Commands
-
-There are two commands you will use to detect secrets; `detect` and `protect`.
-
-#### Detect
-
-The `detect` command is used to scan repos, directories, and files. This command can be used on developer machines and in CI environments.
-
-When running `detect` on a git repository, gitleaks will parse the output of a `git log -p` command (you can see how this executed
-[here](https://github.com/zricethezav/gitleaks/blob/7240e16769b92d2a1b137c17d6bf9d55a8562899/git/git.go#L17-L25)).
-[`git log -p` generates patches](https://git-scm.com/docs/git-log#_generating_patch_text_with_p) which gitleaks will use to detect secrets.
-You can configure what commits `git log` will range over by using the `--log-opts` flag. `--log-opts` accepts any option for `git log -p`.
-For example, if you wanted to run gitleaks on a range of commits you could use the following command: `gitleaks detect --source . --log-opts="--all commitA..commitB"`.
-See the `git log` [documentation](https://git-scm.com/docs/git-log) for more information.
-
-You can scan files and directories by using the `--no-git` option.
-
-#### Protect
-
-The `protect` command is used to scan uncommitted changes in a git repo. This command should be used on developer machines in accordance with
-[shifting left on security](https://cloud.google.com/architecture/devops/devops-tech-shifting-left-on-security).
-When running `protect` on a git repository, gitleaks will parse the output of a `git diff` command (you can see how this executed
-[here](https://github.com/zricethezav/gitleaks/blob/7240e16769b92d2a1b137c17d6bf9d55a8562899/git/git.go#L48-L49)). You can set the
-`--staged` flag to check for changes in commits that have been `git add`ed. The `--staged` flag should be used when running Gitleaks
-as a pre-commit.
-
-**NOTE**: the `protect` command can only be used on git repos, running `protect` on files or directories will result in an error message.
-
-### Creating a baseline
-
-When scanning large repositories or repositories with a long history, it can be convenient to use a baseline. When using a baseline,
-gitleaks will ignore any old findings that are present in the baseline. A baseline can be any gitleaks report. To create a gitleaks report, run gitleaks with the `--report-path` parameter.
-
+5. Add `.env` and .gitignore:
 ```
-gitleaks detect --report-path gitleaks-report.json # This will save the report in a file called gitleaks-report.json
+cp .env.example .env
+# edit .env for local secrets (do not commit)
 ```
 
-Once as baseline is created it can be applied when running the detect command again:
-
-```
-gitleaks detect --baseline-path gitleaks-report.json --report-path findings.json
-```
-
-After running the detect command with the --baseline-path parameter, report output (findings.json) will only contain new issues.
-
-### Verify Findings
-
-You can verify a finding found by gitleaks using a `git log` command.
-Example output:
-
-```
-Finding:     aws_secret="AKIAIMNOJVGFDXXXE4OA"
-RuleID:      aws-access-token
-Secret       AKIAIMNOJVGFDXXXE4OA
-Entropy:     3.65
-File:        checks_test.go
-Line:        37
-Commit:      ec2fc9d6cb0954fb3b57201cf6133c48d8ca0d29
-Author:      Zachary Rice
-Email:       z@email.com
-Date:        2018-01-28T17:39:00Z
-Fingerprint: ec2fc9d6cb0954fb3b57201cf6133c48d8ca0d29:checks_test.go:aws-access-token:37
+6. Build & run Docker:
+```bash
+docker compose up -d --build
+docker compose logs -f
+curl -f http://localhost:5000/health
 ```
 
-We can use the following format to verify the leak:
+---
 
-```
-git log -L {StartLine,EndLine}:{File} {Commit}
-```
+## CI: Gitleaks in GitHub Actions
+A workflow at `.github/workflows/gitleaks.yml` runs on push & PR. It will fail the check if leaks are detected — this enforces shift-left scanning before merges.
 
-So in this example it would look like:
+---
 
-```
-git log -L 37,37:checks_test.go ec2fc9d6cb0954fb3b57201cf6133c48d8ca0d29
-```
+## How to safely remove secrets from history
 
-Which gives us:
+Two recommended tools:
+- `git filter-repo` (recommended)
+- `BFG Repo-Cleaner` (alternative)
 
-```
-commit ec2fc9d6cb0954fb3b57201cf6133c48d8ca0d29
-Author: zricethezav <thisispublicanyways@gmail.com>
-Date:   Sun Jan 28 17:39:00 2018 -0500
+**Important:** after rewriting history, force-push and coordinate with contributors — they must re-clone or reset their local clones.
 
-    [update] entropy check
+---
 
-diff --git a/checks_test.go b/checks_test.go
---- a/checks_test.go
-+++ b/checks_test.go
-@@ -28,0 +37,1 @@
-+               "aws_secret= \"AKIAIMNOJVGFDXXXE4OA\"":          true,
+## Best practices for secrets management
+- Store in a dedicated secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.)
+- Keep secrets out of source control
+- Use ephemeral credentials or short-lived tokens where possible
+- Add pre-commit checks / CI scans (gitleaks, trufflehog) to catch secrets early
+- Audit and rotate keys immediately if exposed
 
-```
+---
 
-## Pre-Commit hook
+## Core Concept Questions (for your README or presentation)
 
-You can run Gitleaks as a pre-commit hook by copying the example `pre-commit.py` script into
-your `.git/hooks/` directory.
+### 1. Explain the concept of shift-left security and why it is important in DevSecOps.
+**Answer:**  
+Shift-left security means integrating security activities early in the software development lifecycle — during requirements, design, coding and CI — rather than treating security as a final phase. By moving security checks left (earlier), teams catch vulnerabilities sooner when they’re cheaper and faster to fix, reduce the risk of insecure releases, and improve developer security awareness. In DevSecOps, shift-left practices (static analysis, secret scanning, dependency checks, threat modeling) embed security into the development pipeline and make secure delivery continuous and automated.
 
-## Configuration
+### 2. How does detecting secrets early in the CI/CD pipeline prevent production vulnerabilities?
+**Answer:**  
+Detecting secrets early prevents accidental exposure of credentials in source control. If secrets are committed to a repo, attackers scanning public repos (or leaked mirrors) may find and exploit them. Early detection allows teams to block the commit/merge before the secret becomes part of history or deployed. Even if a secret gets committed, detecting it early reduces the time window an attacker might have and prompts immediate rotation. It also reduces remediation effort since history rewrite/rotation is more contained.
 
-Gitleaks offers a configuration format you can follow to write your own secret detection rules:
+### 3. What strategies can be used to store secrets securely instead of hardcoding them?
+**Answer:**  
+- Use cloud-managed secret stores (AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, HashiCorp Vault).
+- Inject secrets via environment variables at runtime (via container orchestrators or CI/CD secrets).
+- Use CI/CD secret storage for build-time values (GitHub Actions secrets, GitLab CI variables).
+- Use hardware or cloud KMS to encrypt secrets and fetch decrypted values at runtime.
+- Use short-lived credentials and role-based access (e.g., IAM roles for compute instances).
 
-```toml
-# Title for the gitleaks configuration file.
-title = "Gitleaks title"
+### 4. Describe a situation where a secret could still be exposed even after scanning, and how to prevent it.
+**Answer:**  
+**Situation:** A developer copies a secret into a shared Slack channel, logs it in an issue tracker, or leaves it in a CI build log. Gitleaks scans the repo but cannot detect secrets outside git history.  
+**Prevention:** Complement repository scanning with other controls: monitor logs for secrets (redaction), prevent secrets in chat with DLP tools or integration scanners, ensure CI logs mask secrets, restrict who can view logs, enforce minimal privilege, and run comprehensive audits that include external channels and infrastructure configurations. Use runtime secret rotation and auditing to limit risk.
 
-# Extend the base (this) configuration. When you extend a configuration
-# the base rules take precedence over the extended rules. I.e., if there are
-# duplicate rules in both the base configuration and the extended configuration
-# the base rules will override the extended rules.
-# Another thing to know with extending configurations is you can chain together
-# multiple configuration files to a depth of 2. Allowlist arrays are appended
-# and can contain duplicates.
-# useDefault and path can NOT be used at the same time. Choose one.
-[extend]
-# useDefault will extend the base configuration with the default gitleaks config:
-# https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml
-useDefault = true
-# or you can supply a path to a configuration. Path is relative to where gitleaks
-# was invoked, not the location of the base config.
-path = "common_config.toml"
+---
 
-# An array of tables that contain information that define instructions
-# on how to detect secrets
-[[rules]]
+## Final notes & recommendations
+- Treat any secret found in a repo as **compromised** — rotate it immediately.
+- Integrate scanning tools into local pre-commit hooks plus CI to enforce early detection.
+- Train developers on secure secret handling and provide easy secure alternatives (secret manager libs, automation templates).
 
-# Unique identifier for this rule
-id = "awesome-rule-1"
-
-# Short human readable description of the rule.
-description = "awesome rule 1"
-
-# Golang regular expression used to detect secrets. Note Golang's regex engine
-# does not support lookaheads.
-regex = '''one-go-style-regex-for-this-rule'''
-
-# Golang regular expression used to match paths. This can be used as a standalone rule or it can be used
-# in conjunction with a valid `regex` entry.
-path = '''a-file-path-regex'''
-
-# Array of strings used for metadata and reporting purposes.
-tags = ["tag","another tag"]
-
-# Int used to extract secret from regex match and used as the group that will have
-# its entropy checked if `entropy` is set.
-secretGroup = 3
-
-# Float representing the minimum shannon entropy a regex group must have to be considered a secret.
-entropy = 3.5
-
-# Keywords are used for pre-regex check filtering. Rules that contain
-# keywords will perform a quick string compare check to make sure the
-# keyword(s) are in the content being scanned. Ideally these values should
-# either be part of the idenitifer or unique strings specific to the rule's regex
-# (introduced in v8.6.0)
-keywords = [
-  "auth",
-  "password",
-  "token",
-]
-
-# You can include an allowlist table for a single rule to reduce false positives or ignore commits
-# with known/rotated secrets
-[rules.allowlist]
-description = "ignore commit A"
-commits = [ "commit-A", "commit-B"]
-paths = [
-  '''go\.mod''',
-  '''go\.sum'''
-]
-# note: (rule) regexTarget defaults to check the _Secret_ in the finding.
-# if regexTarget is not specified then _Secret_ will be used.
-# Acceptable values for regexTarget are "match" and "line"
-regexTarget = "match"
-regexes = [
-  '''process''',
-  '''getenv''',
-]
-# note: stopwords targets the extracted secret, not the entire regex match
-# like 'regexes' does. (stopwords introduced in 8.8.0)
-stopwords = [
-  '''client''',
-  '''endpoint''',
-]
-
-
-# This is a global allowlist which has a higher order of precedence than rule-specific allowlists.
-# If a commit listed in the `commits` field below is encountered then that commit will be skipped and no
-# secrets will be detected for said commit. The same logic applies for regexes and paths.
-[allowlist]
-description = "global allow list"
-commits = [ "commit-A", "commit-B", "commit-C"]
-paths = [
-  '''gitleaks\.toml''',
-  '''(.*?)(jpg|gif|doc)'''
-]
-
-# note: (global) regexTarget defaults to check the _Secret_ in the finding.
-# if regexTarget is not specified then _Secret_ will be used.
-# Acceptable values for regexTarget are "match" and "line"
-regexTarget = "match"
-
-regexes = [
-  '''219-09-9999''',
-  '''078-05-1120''',
-  '''(9[0-9]{2}|666)-\d{2}-\d{4}''',
-]
-# note: stopwords targets the extracted secret, not the entire regex match
-# like 'regexes' does. (stopwords introduced in 8.8.0)
-stopwords = [
-  '''client''',
-  '''endpoint''',
-]
-```
-
-Refer to the default [gitleaks config](https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml) for examples or follow the [contributing guidelines](https://github.com/zricethezav/gitleaks/blob/master/README.md) if you would like to contribute to the default configuration. Additionally, you can check out [this gitleaks blog post](https://blog.gitleaks.io/stop-leaking-secrets-configuration-2-3-aeed293b1fbf) which covers advanced configuration setups.
-
-### Additional Configuration
-
-#### gitleaks:allow
-
-If you are knowingly committing a test secret that gitleaks will catch you can add a `gitleaks:allow` comment to that line which will instruct gitleaks
-to ignore that secret. Ex:
-
-```
-class CustomClass:
-    discord_client_secret = '8dyfuiRyq=vVc3RRr_edRk-fK__JItpZ'  #gitleaks:allow
-
-```
-
-#### .gitleaksignore
-
-You can ignore specific findings by creating a `.gitleaksignore` file at the root of your repo. In release v8.10.0 Gitleaks added a `Fingerprint` value to the Gitleaks report. Each leak, or finding, has a Fingerprint that uniquely identifies a secret. Add this fingerprint to the `.gitleaksignore` file to ignore that specific secret. See Gitleaks' [.gitleaksignore](https://github.com/zricethezav/gitleaks/blob/master/.gitleaksignore) for an example. Note: this feature is experimental and is subject to change in the future.
-
-## Sponsorships
-
-<p align="left">
-	  <a href="https://www.tines.com/?utm_source=oss&utm_medium=sponsorship&utm_campaign=gitleaks">
-		  <img alt="Tines Sponsorship" src="https://user-images.githubusercontent.com/15034943/146411864-4878f936-b4f7-49a0-b625-f9f40c704bfa.png" width=200>
-	  </a>
-  </p>
-
-## Exit Codes
-
-You can always set the exit code when leaks are encountered with the --exit-code flag. Default exit codes below:
-
-```
-0 - no leaks present
-1 - leaks or error encountered
-126 - unknown flag
-```
