@@ -15,6 +15,7 @@ regex = '''(supersecretpassword[0-9]+)'''
 tags = ["password"]
 
 [[rules]]
+id = "token-rule"
 description = "Detect demo GitHub-style tokens"
 regex = '''ghp_[A-Za-z0-9]{10,}'''
 tags = ["demo"]
