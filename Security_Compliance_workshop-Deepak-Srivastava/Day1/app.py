@@ -10,29 +10,35 @@ from flask import Flask, jsonify, request
 import psycopg2
 import boto3
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Intentional secrets for demonstration (DO NOT DO THIS IN PRODUCTION!)
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
-REMOVED = "REMOVED"
+"""
+Configuration is loaded from environment variables to avoid hardcoded secrets.
+See `env.example` for the list of variables.
+"""
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD", "")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+API_KEY = os.getenv("API_KEY", "")
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
-# Database configuration with hardcoded credentials
+# Database configuration
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "myapp",
-    "user": "admin",
-    "password": "admin_password_123!"
+    "host": os.getenv("DATABASE_HOST", "localhost"),
+    "port": int(os.getenv("DATABASE_PORT", "5432")),
+    "database": os.getenv("DATABASE_NAME", "myapp"),
+    "user": os.getenv("DATABASE_USER", "admin"),
+    "password": DATABASE_PASSWORD,
 }
 
 # Redis configuration
-REMOVED = "REMOVED"
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
 @app.route('/')
 def home():
@@ -70,15 +76,7 @@ def get_config():
         "api_version": "v1"
     })
 
-@app.route('/secrets')
-def get_secrets():
-    """DANGEROUS: This endpoint exposes secrets - NEVER DO THIS!"""
-    return jsonify({
-        "database_password": REMOVED,
-        "aws_access_key": REMOVED,
-        "api_key": REMOVED,
-        "jwt_secret": REMOVED
-    })
+# Security: Do not expose secrets via any endpoint
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
