@@ -27,5 +27,5 @@ Showcase Dynamic Application Security Testing (DAST) using OWASP ZAP in GitLab C
 - **Shift-left security**: Integrating ZAP scans in CI/CD prevents deploying exploitable apps.
 
 ## Evidence
-- Screenshot of ZAP Reports
+- Screenshot of ZAP Reportss
 - Pipeline artifact: `zap-report.html`
