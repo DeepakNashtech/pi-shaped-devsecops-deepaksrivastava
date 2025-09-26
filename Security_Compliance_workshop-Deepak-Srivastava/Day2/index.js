@@ -11,6 +11,10 @@ db.serialize(() => {
 });
 
 // ❌ Vulnerable to SQL Injection
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
+
 app.get("/user", (req, res) => {
   const userId = req.query.id; // unvalidated
   const query = `SELECT * FROM users WHERE id = '${userId}'`;
