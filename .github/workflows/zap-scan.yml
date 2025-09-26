@@ -24,6 +24,7 @@ jobs:
 
       - name: Build vuln-node-app image
         run: |
+          cd Security_Compliance_workshop-Deepak-Srivastava/Day2
           docker build -t vuln-node-app .
 
       - name: Create docker network
@@ -33,7 +34,6 @@ jobs:
 
       - name: Run vuln app container
         run: |
-          cd Security_Compliance_workshop-Deepak-Srivastava/Day2
           docker run -d --name vuln-app --network zapnet vuln-node-app
           echo "Waiting for app to start..."
           # Wait until the app responds (max ~30s)
