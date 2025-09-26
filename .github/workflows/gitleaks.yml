@@ -3,8 +3,13 @@ name: gitleaks-scan
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'Day1/**'
   pull_request:
+    branches: [ main ]
     types: [opened, synchronize, reopened]
+    paths:
+      - 'Day1/**'
 
 jobs:
   gitleaks:

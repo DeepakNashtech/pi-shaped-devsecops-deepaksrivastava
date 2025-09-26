@@ -1,0 +1,80 @@
+name: OWASP ZAP Scan
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Day2/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Day2/**'
+
+name: OWASP ZAP DAST
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx (optional)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build vuln-node-app image
+        run: |
+          docker build -t vuln-node-app .
+
+      - name: Create docker network
+        run: |
+          # create a user-defined network so containers can reach each other by name
+          docker network create zapnet || true
+
+      - name: Run vuln app container
+        run: |
+          cd Day2
+          docker run -d --name vuln-app --network zapnet vuln-node-app
+          echo "Waiting for app to start..."
+          # Wait until the app responds (max ~30s)
+          for i in {1..30}; do
+            if docker run --rm --network zapnet byrnedo/alpine-curl:latest -sS http://vuln-app:3000 >/dev/null 2>&1; then
+              echo "App is up"
+              break
+            fi
+            echo "Waiting... ($i)"
+            sleep 1
+          done
+
+      - name: Run OWASP ZAP baseline scan
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          # Run ZAP container in same network. Mount workspace so report is written to repo workspace.
+          docker run --rm \
+            --network zapnet \
+            -v "$GITHUB_WORKSPACE":/zap/wrk/:rw \
+            owasp/zap2docker-stable \
+            zap-baseline.py -t http://vuln-app:3000 -r /zap/wrk/zap-report.html || true
+
+      - name: Stop vuln-app container
+        if: always()
+        run: |
+          docker stop vuln-app || true
+          docker rm vuln-app || true
+          docker network rm zapnet || true
+
+      - name: Upload ZAP report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap-report.html
+
