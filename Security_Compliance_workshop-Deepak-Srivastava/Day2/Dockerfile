@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:18-bullseye
 
 WORKDIR /usr/src/app
 
@@ -8,4 +8,5 @@ RUN npm install
 COPY . .
 
 EXPOSE 3000
-CMD ["npm", "start"]
+
+CMD ["node", "index.js"]
