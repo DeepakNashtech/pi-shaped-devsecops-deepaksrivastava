@@ -29,14 +29,12 @@ jobs:
 
       - name: Create docker network
         run: |
-          # create a user-defined network so containers can reach each other by name
           docker network create zapnet || true
 
       - name: Run vuln app container
         run: |
           docker run -d --name vuln-app --network zapnet vuln-node-app
           echo "Waiting for app to start..."
-          # Wait until the app responds (max ~30s)
           for i in {1..30}; do
             if docker run --rm --network zapnet byrnedo/alpine-curl:latest -sS http://vuln-app:3000 >/dev/null 2>&1; then
               echo "App is up"
@@ -50,12 +48,12 @@ jobs:
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          # Run ZAP container in same network. Mount workspace so report is written to repo workspace.
           docker run --rm \
             --network zapnet \
             -v "$GITHUB_WORKSPACE":/zap/wrk/:rw \
+            --user root \
             ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t http://vuln-app:3000 -r /zap/wrk/zap-report.html || true
+            zap-baseline.py -t http://vuln-app:3000 -r zap-report.html || true
 
       - name: Stop vuln-app container
         if: always()
@@ -69,5 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: zap-report.html
+          path: ${{ github.workspace }}/zap-report.html
 
