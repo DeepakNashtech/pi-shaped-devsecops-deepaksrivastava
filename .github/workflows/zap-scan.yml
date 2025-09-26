@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'Day2/**'
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day2/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'Day2/**'
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day2/**'
 
 jobs:
   zap_scan:

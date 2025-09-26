@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'Day1/**'
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day1/**'
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
     paths:
-      - 'Day1/**'
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day1/**'
 
 jobs:
   gitleaks:
