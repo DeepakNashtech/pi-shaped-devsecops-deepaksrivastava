@@ -54,7 +54,7 @@ jobs:
           docker run --rm \
             --network zapnet \
             -v "$GITHUB_WORKSPACE":/zap/wrk/:rw \
-            owasp/zap2docker-stable \
+            ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://vuln-app:3000 -r /zap/wrk/zap-report.html || true
 
       - name: Stop vuln-app container
