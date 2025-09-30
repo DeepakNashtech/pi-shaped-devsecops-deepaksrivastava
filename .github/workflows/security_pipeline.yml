@@ -25,7 +25,7 @@ jobs:
           cd Security_Compliance_workshop-Deepak-Srivastava/Day3
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install bandit gunicorn
+          pip install bandit gunicorn semgrep
 
       # --- 2. SAST Stage (Static Analysis) ---
       - name: 4. Run Bandit Scan (Python SAST)
@@ -39,11 +39,10 @@ jobs:
       - name: 5. Run Semgrep Scan (Generic SAST)
         id: semgrep
         continue-on-error: true
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: auto
-          args: "--json --output=semgrep-report.json"
-        working-directory: Security_Compliance_workshop-Deepak-Srivastava/Day3
+        run: |
+          echo "Running Semgrep scan..."
+          cd Security_Compliance_workshop-Deepak-Srivastava/Day3
+          semgrep --config auto --json --output=semgrep-report.json || true
 
       # --- 3. Secrets Stage (Gitleaks) ---
       - name: 6. Run Gitleaks Scan
@@ -51,7 +50,7 @@ jobs:
         continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         with:
-          args: detect --report-format json --report-path gitleaks-report.json
+          args: detect --report-format json --report-path Security_Compliance_workshop-Deepak-Srivastava/Day3/gitleaks-report.json
 
       # --- 4. DAST Stage (Dynamic Analysis - ZAP Baseline) ---
       - name: 7. Start Flask Application (Background Server)
@@ -70,7 +69,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.9.0
         with:
           target: 'http://127.0.0.1:5000'
-          cmd_options: '-r zap-report.html'
+          cmd_options: '-r Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html'
 
       - name: 9. Stop Flask Application
         if: always()
