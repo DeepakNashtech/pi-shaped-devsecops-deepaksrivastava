@@ -1,0 +1,110 @@
+name: CI/CD Secure Coding & Code Scanning
+
+# This workflow runs on every push to 'main' and for every pull request targeting 'main'.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- 1. Setup and Install Stage ---
+
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 3. Install application and tool dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Install Bandit and Gunicorn for SAST/DAST setup
+          pip install bandit gunicorn
+
+      # --- 2. SAST Stage (Static Analysis) ---
+
+      - name: 4. Run Bandit Scan (Python SAST)
+        id: bandit
+        continue-on-error: true # Allow pipeline to continue on findings
+        run: |
+          echo "Running Bandit scan for Python security..."
+          # Bandit scan: -r recursive, -o output file, -f html format
+          bandit -r . -o bandit-report.html -f html
+          echo "Bandit report generated: bandit-report.html"
+
+      - name: 5. Run Semgrep Scan (Generic SAST)
+        id: semgrep
+        continue-on-error: true # Allow pipeline to continue on findings
+        # Use the dedicated Semgrep GitHub Action
+        uses: returntocorp/semgrep-action@v2
+        with:
+          config: auto
+          output: semgrep-report.json
+          # Note: The output file path is relative to the workspace
+
+      # --- 3. Secrets Stage (Gitleaks) ---
+
+      - name: 6. Run Gitleaks Scan
+        id: gitleaks
+        continue-on-error: true # Allow pipeline to continue on findings
+        # Use the dedicated Gitleaks GitHub Action
+        uses: zricethezav/gitleaks-action@v1
+        with:
+          report-format: json
+          report-path: gitleaks-report.json
+          # Note: This scans the git history of the checked out code
+
+      # --- 4. DAST Stage (Dynamic Analysis - ZAP Baseline) ---
+
+      - name: 7. Start Flask Application (Background Server)
+        id: app_start
+        run: |
+          echo "Starting application with Gunicorn on 127.0.0.1:5000..."
+          # Start Gunicorn in the background and write PID to a file
+          gunicorn --bind 127.0.0.1:5000 app:app &
+          echo $! > /tmp/gunicorn.pid
+          echo "Waiting 5 seconds for app to be ready..."
+          sleep 5
+
+      - name: 8. Run OWASP ZAP Baseline Scan
+        id: zap
+        continue-on-error: true # Allow pipeline to continue on findings
+        # Use an action to run the ZAP Baseline Scan against the background app
+        uses: anmol093/zap-baseline-scan-action@v1.4.1
+        with:
+          target: 'http://127.0.0.1:5000'
+          # Baseline scan is fast and passive, suitable for CI/CD
+          additional_options: '-r zap-report.html'
+
+      - name: 9. Stop Flask Application
+        if: always() # Ensure this runs even if the ZAP step fails
+        run: |
+          if [ -f /tmp/gunicorn.pid ]; then
+            APP_PID=$(cat /tmp/gunicorn.pid)
+            echo "Stopping application PID: $APP_PID"
+            kill $APP_PID || true # '|| true' prevents failure if process already stopped
+          else
+            echo "Gunicorn PID file not found. Application may not have started."
+          fi
+
+      # --- 5. Report Stage (Artifacts Upload) ---
+
+      - name: 10. Upload Scan Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-reports
+          path: |
+            bandit-report.html
+            semgrep-report.json
+            gitleaks-report.json
+            zap-report.html
+          retention-days: 7
+

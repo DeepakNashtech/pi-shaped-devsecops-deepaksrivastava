@@ -1,0 +1,4 @@
+flask==1.1.2
+jinja2==3.0.3
+gunicorn
+requests

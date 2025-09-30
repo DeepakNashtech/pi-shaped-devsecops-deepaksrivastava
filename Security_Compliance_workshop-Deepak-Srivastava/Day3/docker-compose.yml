@@ -1,0 +1,42 @@
+services:
+  # --- 1. Application Service ---
+  app:
+    # Build the image using the Dockerfile in the current directory
+    build: .
+    # Map the host port 5000 to the container port 5000 for easy local access (http://localhost:5000)
+    ports:
+      - "5000:5000"
+    # Name the container explicitly for easy networking reference by ZAP
+    container_name: flask-vulnerable-app
+    # Set the restart policy
+    restart: always
+
+  # --- 2. ZAP DAST Scanner Service ---
+  zap_scanner:
+    # Use the official ZAP weekly image (matching the GitLab CI file)
+    image: owasp/zap2docker-weekly:latest
+    # Mount the current directory to /zap/wrk/ to save the report files
+    volumes:
+      - .:/zap/wrk/:rw
+    # Ensure the scan runs once and then exits
+    command: >
+      zap-baseline.py 
+      -t http://app:5000/ 
+      -r /zap/wrk/zap-compose-report.html 
+      -g /zap/wrk/zap-compose-generate.conf
+      -w /zap/wrk/zap-compose-warn.txt
+    
+    # Wait for the 'app' service to be healthy before starting the scan
+    depends_on:
+      app:
+        condition: service_started
+    
+    # Ensure ZAP can reach the 'app' service using the service name 'app' as the hostname
+    networks:
+      default:
+        aliases:
+          - zap
+          - app
+    
+    # The scan will run and then exit, making this a one-shot service
+    restart: 'no'
