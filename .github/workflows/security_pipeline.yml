@@ -67,9 +67,11 @@ jobs:
         id: zap
         continue-on-error: true
         run: |
-          docker run --rm -v $PWD:/zap/wrk/:rw -w /zap/wrk/ -u 0 \
+          docker run --rm -u 0 --network="host" \
+          -v $PWD:/zap/wrk/:rw -w /zap/wrk/ \
           ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-          -t http://127.0.0.1:5000 -r Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html
+          -t http://127.0.0.1:5000 \
+          -r Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html
 
       - name: 9. Stop Flask Application
         if: always()
