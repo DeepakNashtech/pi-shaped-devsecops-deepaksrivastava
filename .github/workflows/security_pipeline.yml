@@ -42,7 +42,8 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: auto
-          args: --json --output=semgrep-report.json
+          args: "--json --output=semgrep-report.json"
+        working-directory: Security_Compliance_workshop-Deepak-Srivastava/Day3
 
       # --- 3. Secrets Stage (Gitleaks) ---
       - name: 6. Run Gitleaks Scan
@@ -89,8 +90,8 @@ jobs:
           name: security-scan-reports
           path: |
             Security_Compliance_workshop-Deepak-Srivastava/Day3/bandit-report.html
-            semgrep-report.json
-            gitleaks-report.json
-            zap-report.html
+            Security_Compliance_workshop-Deepak-Srivastava/Day3/semgrep-report.json
+            Security_Compliance_workshop-Deepak-Srivastava/Day3/gitleaks-report.json
+            Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html
           retention-days: 7
 
