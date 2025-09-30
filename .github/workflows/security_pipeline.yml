@@ -69,7 +69,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.9.0
         with:
           target: 'http://127.0.0.1:5000'
-          cmd_options: '-r Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html'
+          cmd_options: '--user root -r Security_Compliance_workshop-Deepak-Srivastava/Day3/zap-report.html'
 
       - name: 9. Stop Flask Application
         if: always()
