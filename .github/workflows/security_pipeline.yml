@@ -42,7 +42,7 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: auto
-          args: --json > semgrep-report.json
+          args: --json --output=semgrep-report.json
 
       # --- 3. Secrets Stage (Gitleaks) ---
       - name: 6. Run Gitleaks Scan
