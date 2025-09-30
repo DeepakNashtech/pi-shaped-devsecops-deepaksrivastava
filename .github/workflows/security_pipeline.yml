@@ -33,8 +33,8 @@ jobs:
         continue-on-error: true
         run: |
           echo "Running Bandit scan for Python security..."
-          bandit -r . -o bandit-report.html -f html
-          echo "Bandit report generated: bandit-report.html"
+          cd Security_Compliance_workshop-Deepak-Srivastava/Day3
+          bandit -r . -o bandit-report.html -f html || true
 
       - name: 5. Run Semgrep Scan (Generic SAST)
         id: semgrep
@@ -42,16 +42,15 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: auto
-          output: semgrep-report.json
+          args: --json > semgrep-report.json
 
       # --- 3. Secrets Stage (Gitleaks) ---
       - name: 6. Run Gitleaks Scan
         id: gitleaks
         continue-on-error: true
-        uses: zricethezav/gitleaks-action@v1
+        uses: gitleaks/gitleaks-action@v2
         with:
-          report-format: json
-          report-path: gitleaks-report.json
+          args: detect --report-format json --report-path gitleaks-report.json
 
       # --- 4. DAST Stage (Dynamic Analysis - ZAP Baseline) ---
       - name: 7. Start Flask Application (Background Server)
@@ -70,7 +69,6 @@ jobs:
         uses: zaproxy/action-baseline@v0.9.0
         with:
           target: 'http://127.0.0.1:5000'
-          rules_file_name: ''
           cmd_options: '-r zap-report.html'
 
       - name: 9. Stop Flask Application
@@ -90,7 +88,7 @@ jobs:
         with:
           name: security-scan-reports
           path: |
-            bandit-report.html
+            Security_Compliance_workshop-Deepak-Srivastava/Day3/bandit-report.html
             semgrep-report.json
             gitleaks-report.json
             zap-report.html
