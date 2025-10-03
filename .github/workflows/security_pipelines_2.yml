@@ -30,14 +30,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-        working-directory: day4
+        working-directory: Security_Compliance_workshop-Deepak-Srivastava/Day4
 
       - name: Run Bandit (Python SAST)
         id: bandit
         run: |
           pip install bandit
           bandit -r . -f html -o bandit-report.html || true
-        working-directory: day4
+        working-directory: Security_Compliance_workshop-Deepak-Srivastava/Day4
         shell: bash
         continue-on-error: true
 
@@ -45,14 +45,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bandit-report
-          path: day4/bandit-report.html
+          path: Security_Compliance_workshop-Deepak-Srivastava/Day4/bandit-report.html
 
       - name: Run Semgrep (Default Behavior)
         id: semgrep
         run: |
           pip install semgrep
           semgrep --config=auto --json --output=semgrep-report.json || true
-        working-directory: day4
+        working-directory: Security_Compliance_workshop-Deepak-Srivastava/Day4
         shell: bash
         continue-on-error: true
 
@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-json-report
-          path: day4/semgrep-report.json
+          path: Security_Compliance_workshop-Deepak-Srivastava/Day4/semgrep-report.json
 
   trivy_scan:
     runs-on: ubuntu-latest
