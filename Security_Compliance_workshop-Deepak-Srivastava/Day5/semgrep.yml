@@ -1,0 +1,14 @@
+rules:
+  - id: python-eval
+    patterns:
+      - pattern: eval(...)
+    message: "Avoid using eval() on user input - leads to code injection"
+    severity: ERROR
+    languages: [python]
+
+  - id: python-hardcoded-secret
+    patterns:
+      - pattern: "SECRET_TOKEN = $X"
+    message: "Hardcoded secret detected"
+    severity: WARNING
+    languages: [python]

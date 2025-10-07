@@ -1,0 +1,5 @@
+title = "gitleaks simple config"
+[[rules]]
+description = "Detect demo secret pattern"
+regex = '''sk_demo_[A-Za-z0-9_]{8,}'''
+tags = ["demo"]

@@ -3,8 +3,12 @@ name: CI/CD Secure Coding & Code Scanning
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day3/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day3/**'
 
 jobs:
   security_scan:

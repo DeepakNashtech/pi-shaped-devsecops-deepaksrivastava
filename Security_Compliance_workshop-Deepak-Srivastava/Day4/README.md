@@ -39,8 +39,3 @@ It integrates **Bandit, Semgrep, Trivy, and OWASP ZAP**.
 
 * If **Trivy reports HIGH severity in base image** → Update base image (`python:3.10-slim` → latest patched version).
 * If **Bandit flags hardcoded secrets** → Move secrets to a vault (HashiCorp Vault, AWS Secrets Manager, GitHub Actions secrets).
-
----
-
-⚡ Harun, I can also prepare the **GitLab CI version** of this pipeline (`.gitlab-ci.yml`).
-Do you want me to generate that so you have both options handy?

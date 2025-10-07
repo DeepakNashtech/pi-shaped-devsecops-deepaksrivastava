@@ -1,0 +1,177 @@
+name: DevSecOps Full Scan Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day5/**'
+  pull_request:
+    paths:
+      - 'Security_Compliance_workshop-Deepak-Srivastava/Day5/**'
+
+env:
+  ROOT_DIR: Security_Compliance_workshop-Deepak-Srivastava/Day5
+  APP_DIR: Security_Compliance_workshop-Deepak-Srivastava/Day5/app
+  INFRA_DIR: Security_Compliance_workshop-Deepak-Srivastava/Day5/infrastructure
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      python-version: "3.10"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit semgrep checkov
+      - name: Save workspace
+        run: echo "Setup complete"
+
+  bandit:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Bandit
+        run: pip install bandit
+      - name: Run Bandit
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          bandit -r . -f html -o bandit-report.html || true
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: ${{ env.APP_DIR }}/bandit-report.html
+
+  semgrep:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Semgrep
+        run: pip install semgrep
+      - name: Run Semgrep
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          semgrep --config auto --json --output semgrep-report.json || true
+      - name: Upload Semgrep Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: ${{ env.APP_DIR }}/semgrep-report.json
+
+  trivy_deps:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy FS scan (dependencies)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          format: json
+          output: ${{ env.ROOT_DIR }}/trivy-deps-report.json
+          vuln-type: "os,library"
+          ignore-unfixed: true
+          path: ${{ env.APP_DIR }}
+      - name: Upload Trivy Deps Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-deps
+          path: ${{ env.ROOT_DIR }}/trivy-deps-report.json
+
+  checkov:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Checkov
+        run: pip install checkov
+      - name: Run Checkov for IaC
+        working-directory: ${{ env.ROOT_DIR }}
+        run: |
+          checkov -d ${{ env.INFRA_DIR }} -o json > checkov-report.json || true
+      - name: Upload Checkov Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: ${{ env.ROOT_DIR }}/checkov-report.json
+
+  gitleaks:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source ${{ env.ROOT_DIR }} --report-path ${{ env.ROOT_DIR }}/gitleaks-report.json --report-format json || true
+      - name: Upload Gitleaks report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: ${{ env.ROOT_DIR }}/gitleaks-report.json
+
+  build_image:
+    needs: [bandit, semgrep, trivy_deps, checkov, gitleaks]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app Docker image
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          docker build -t devsecops-demo-app . --pull
+      - name: Verify image
+        run: docker images | head -n 10
+
+  zap:
+    needs: build_image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Flask app (background)
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          nohup python app.py > app.log 2>&1 & disown || true
+          echo "Waiting for Flask to start..."
+          for i in {1..30}; do
+            if curl --fail http://localhost:5000/ >/dev/null 2>&1; then
+              echo "Flask is ready"
+              break
+            fi
+            sleep 3
+          done
+          if ! curl --fail http://localhost:5000/ >/dev/null 2>&1; then
+            echo "Flask not responding, dumping logs:"
+            tail -n 200 app.log || true
+            exit 1
+          fi
+
+      - name: Fix permissions for ZAP
+        run: sudo chown -R 1000:1000 "${{ github.workspace }}" || true
+
+      - name: Run ZAP baseline scan
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            --add-host=host.docker.internal:host-gateway \
+            -v "${{ github.workspace }}/${{ env.ROOT_DIR }}:/zap/wrk" \
+            --user root \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://host.docker.internal:5000/ -J zap-report.json -r zap-report.html || true
+
+      - name: Upload ZAP Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: |
+            ${{ env.ROOT_DIR }}/zap-report.json
+            ${{ env.ROOT_DIR }}/zap-report.html
+
